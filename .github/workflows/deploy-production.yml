@@ -1,0 +1,74 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g. v1.0.0)'
+        required: true
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment: 
+      name: production
+      # This requires manual approval via GitHub Environment rules
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel
+
+      - name: Deploy Frontend to Vercel (Production)
+        run: vercel deploy --prod --token ${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Install Railway CLI
+        run: npm i -g @railway/cli
+
+      - name: Deploy Backends to Railway (Production)
+        run: |
+          railway up --environment production --service mira-api-gateway
+          railway up --environment production --service mira-ml-service
+          railway up --environment production --service mira-llm-service
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
+
+  smoke-tests:
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check API Gateway Health
+        run: curl -f https://api.mira.yourdomain.com/health || exit 1
+        
+      # Note: Python endpoints are marked as internal in Railway and shouldn't be exposed publicly directly.
+      # If they are, curl them here. Otherwise, API Gateway healthcheck should verify internal connectivity.
+
+      - name: Auto-Rollback on Failure
+        if: failure()
+        run: |
+          npm i -g @railway/cli
+          railway rollback --environment production --service mira-api-gateway
+          railway rollback --environment production --service mira-ml-service
+          railway rollback --environment production --service mira-llm-service
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
+
+  notify:
+    needs: [deploy-production, smoke-tests]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Notify Slack via n8n Webhook
+        run: |
+          curl -X POST ${{ secrets.N8N_SLACK_WEBHOOK_URL }} \
+            -H "Content-Type: application/json" \
+            -d '{"event": "production_deploy", "status": "${{ job.status }}", "version": "${{ github.event.inputs.version }}"}'

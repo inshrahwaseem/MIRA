@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  web:
+    build: 
+      context: ./apps/web
+    ports:
+      - "3000:3000"
+    env_file: .env.local
+    depends_on:
+      - api-gateway
+
+  api-gateway:
+    build: 
+      context: ./apps/api-gateway
+    ports:
+      - "3001:3001"
+    env_file: .env.local
+
+  ml-service:
+    build: 
+      context: ./services/ml-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - model_cache:/root/.cache
+
+  llm-service:
+    build: 
+      context: ./services/llm-service
+    ports:
+      - "8001:8001"
+    volumes:
+      - chroma_data:/chroma
+
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+
+  chromadb:
+    image: chromadb/chroma
+    ports:
+      - "8002:8000" # Container default is 8000 usually
+    volumes:
+      - chroma_data:/chroma
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/mlflow
+
+  langfuse:
+    image: langfuse/langfuse:latest
+    ports:
+      - "3002:3000" # Container default is 3000
+
+  n8n:
+    image: n8nio/n8n
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  model_cache:
+  chroma_data:
+  ollama_models:
+  mlflow_data:
+  n8n_data:

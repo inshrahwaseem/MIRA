@@ -1,0 +1,116 @@
+{
+  "name": "MIRA - ML Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 6 * * *" }
+          ]
+        }
+      },
+      "id": "1",
+      "name": "Schedule Trigger (6AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://mira-mlflow:5000/api/2.0/mlflow/experiments/list",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        }
+      },
+      "id": "2",
+      "name": "Get MLflow Experiments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://mira-mlflow:5000/api/2.0/mlflow/runs/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "experiment_ids", "value": "={{ [$json.experiments[0].experiment_id] }}" },
+            { "name": "max_results", "value": 1 }
+          ]
+        }
+      },
+      "id": "3",
+      "name": "Get Latest Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            { "value1": "={{ $json.runs[0].data.metrics[0].value }}", "operation": "smaller", "value2": 0.75 }
+          ]
+        }
+      },
+      "id": "4",
+      "name": "If Accuracy < 0.75",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_SLACK_WEBHOOK_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "text", "value": "🚨 MIRA ML Alert: Model accuracy has dropped below 0.75. Current value: {{ $('Get Latest Run').item.json.runs[0].data.metrics[0].value }}" }
+          ]
+        }
+      },
+      "id": "5",
+      "name": "Slack Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1000, 200]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (6AM)": {
+      "main": [[{"node": "Get MLflow Experiments", "type": "main", "index": 0}]]
+    },
+    "Get MLflow Experiments": {
+      "main": [[{"node": "Get Latest Run", "type": "main", "index": 0}]]
+    },
+    "Get Latest Run": {
+      "main": [[{"node": "If Accuracy < 0.75", "type": "main", "index": 0}]]
+    },
+    "If Accuracy < 0.75": {
+      "main": [
+        [{"node": "Slack Alert", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

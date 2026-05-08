@@ -1,0 +1,135 @@
+{
+  "name": "MIRA - Crisis Followup",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "supabase-webhook-crisis",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Supabase Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300],
+      "webhookId": "webhook-id-placeholder"
+    },
+    {
+      "parameters": {
+        "amount": 24,
+        "unit": "hours"
+      },
+      "id": "2",
+      "name": "Wait 24 Hours",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/sessions?user_id=eq.{{ $('Supabase Webhook').item.json.body.record.user_id }}&created_at=gte.{{ $('Wait 24 Hours').item.json.timestamp }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "Bearer ={{ $env.SUPABASE_SERVICE_KEY }}" }
+          ]
+        }
+      },
+      "id": "3",
+      "name": "Check Recent Sessions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            { "value1": "={{ $json.length === 0 }}", "value2": true }
+          ]
+        }
+      },
+      "id": "3a",
+      "name": "If No Session Exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer ={{ $env.RESEND_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "from", "value": "MIRA Care <care@yourdomain.com>" },
+            { "name": "to", "value": "={{ $('Supabase Webhook').item.json.body.record.user_email }}" },
+            { "name": "subject", "value": "Thinking of you" },
+            { "name": "html", "value": "<div><p>Hi, I just wanted to check in to see how you're feeling today. I'm always here when you need me.</p></div>" }
+          ]
+        }
+      },
+      "id": "4",
+      "name": "Send Resend Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1000, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/crisis_events?id=eq.{{ $('Supabase Webhook').item.json.body.record.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "Bearer ={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "followup_sent", "value": true }
+          ]
+        }
+      },
+      "id": "5",
+      "name": "Update Crisis Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1200, 200]
+    }
+  ],
+  "connections": {
+    "Supabase Webhook": {
+      "main": [[{"node": "Wait 24 Hours", "type": "main", "index": 0}]]
+    },
+    "Wait 24 Hours": {
+      "main": [[{"node": "Check Recent Sessions", "type": "main", "index": 0}]]
+    },
+    "Check Recent Sessions": {
+      "main": [[{"node": "If No Session Exists", "type": "main", "index": 0}]]
+    },
+    "If No Session Exists": {
+      "main": [
+        [{"node": "Send Resend Email", "type": "main", "index": 0}]
+      ]
+    },
+    "Send Resend Email": {
+      "main": [[{"node": "Update Crisis Event", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

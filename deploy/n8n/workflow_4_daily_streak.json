@@ -1,0 +1,92 @@
+{
+  "name": "MIRA - Daily Streak Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 19 * * *" }
+          ]
+        }
+      },
+      "id": "1",
+      "name": "Schedule Trigger (7PM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/get_users_needing_reminder",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "Bearer ={{ $env.SUPABASE_SERVICE_KEY }}" }
+          ]
+        }
+      },
+      "id": "2",
+      "name": "Fetch Reminders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 20,
+        "options": {}
+      },
+      "id": "3",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 2,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer ={{ $env.RESEND_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "from", "value": "MIRA <mira@yourdomain.com>" },
+            { "name": "to", "value": "={{ $json.email }}" },
+            { "name": "subject", "value": "Keep your streak going!" },
+            { "name": "html", "value": "<div><p>Hi {{ $json.name }}, take 2 minutes to check in with MIRA tonight.</p></div>" }
+          ]
+        }
+      },
+      "id": "4",
+      "name": "Send Reminder Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [800, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (7PM)": {
+      "main": [[{"node": "Fetch Reminders", "type": "main", "index": 0}]]
+    },
+    "Fetch Reminders": {
+      "main": [[{"node": "Split In Batches", "type": "main", "index": 0}]]
+    },
+    "Split In Batches": {
+      "main": [[{"node": "Send Reminder Email", "type": "main", "index": 0}]]
+    },
+    "Send Reminder Email": {
+      "main": [[{"node": "Split In Batches", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

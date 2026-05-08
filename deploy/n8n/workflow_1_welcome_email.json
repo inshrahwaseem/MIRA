@@ -1,0 +1,96 @@
+{
+  "name": "MIRA - Welcome Email Flow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "supabase-webhook-welcome",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Supabase Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300],
+      "webhookId": "webhook-id-placeholder"
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "hours"
+      },
+      "id": "2",
+      "name": "Wait 1 Hour",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer ={{ $env.RESEND_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "from", "value": "MIRA <mira@yourdomain.com>" },
+            { "name": "to", "value": "={{ $json.body.record.email }}" },
+            { "name": "subject", "value": "Welcome to your sanctuary, {{ $json.body.record.name }}" },
+            { "name": "html", "value": "<div><h1>Welcome to MIRA</h1><p>We are so glad you are here.</p></div>" }
+          ]
+        }
+      },
+      "id": "3",
+      "name": "Resend API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/automation_log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "Bearer ={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "user_id", "value": "={{ $('Supabase Webhook').item.json.body.record.id }}" },
+            { "name": "action_type", "value": "welcome_email_sent" }
+          ]
+        }
+      },
+      "id": "4",
+      "name": "Log to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [800, 300]
+    }
+  ],
+  "connections": {
+    "Supabase Webhook": {
+      "main": [[{"node": "Wait 1 Hour", "type": "main", "index": 0}]]
+    },
+    "Wait 1 Hour": {
+      "main": [[{"node": "Resend API", "type": "main", "index": 0}]]
+    },
+    "Resend API": {
+      "main": [[{"node": "Log to Supabase", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

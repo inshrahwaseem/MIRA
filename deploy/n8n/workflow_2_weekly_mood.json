@@ -1,0 +1,119 @@
+{
+  "name": "MIRA - Weekly Mood Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 9 * * 1" }
+          ]
+        }
+      },
+      "id": "1",
+      "name": "Schedule Trigger (Mon 9am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/user_profiles?weekly_email=eq.true&select=id,email,name",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "Bearer ={{ $env.SUPABASE_SERVICE_KEY }}" }
+          ]
+        }
+      },
+      "id": "2",
+      "name": "Fetch Eligible Users",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "id": "3",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 2,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://mira-llm-service:8001/generate/weekly-report",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-internal-secret", "value": "={{ $env.INTERNAL_API_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "user_id", "value": "={{ $json.id }}" }
+          ]
+        }
+      },
+      "id": "4",
+      "name": "LLM Generate Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [800, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer ={{ $env.RESEND_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "from", "value": "MIRA Insights <insights@yourdomain.com>" },
+            { "name": "to", "value": "={{ $('Split In Batches').item.json.email }}" },
+            { "name": "subject", "value": "Your Weekly MIRA Reflection" },
+            { "name": "html", "value": "<div><p>{{ $json.report_html }}</p></div>" }
+          ]
+        }
+      },
+      "id": "5",
+      "name": "Send Resend Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1000, 200]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (Mon 9am)": {
+      "main": [[{"node": "Fetch Eligible Users", "type": "main", "index": 0}]]
+    },
+    "Fetch Eligible Users": {
+      "main": [[{"node": "Split In Batches", "type": "main", "index": 0}]]
+    },
+    "Split In Batches": {
+      "main": [[{"node": "LLM Generate Report", "type": "main", "index": 0}]]
+    },
+    "LLM Generate Report": {
+      "main": [[{"node": "Send Resend Email", "type": "main", "index": 0}]]
+    },
+    "Send Resend Email": {
+      "main": [[{"node": "Split In Batches", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,106 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          
+      - name: Install Node Dependencies
+        run: npm ci
+        
+      - name: Install Python Tools
+        run: pip install ruff mypy
+        
+      - name: Run ESLint
+        run: npx eslint .
+        
+      - name: Run TypeScript Typecheck
+        run: npx tsc --noEmit
+        
+      - name: Run Ruff (Python Linter)
+        run: ruff check .
+        
+      - name: Run MyPy (Python Typecheck)
+        run: mypy services/
+
+  test-python:
+    name: Python Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          
+      - name: Install dependencies
+        run: |
+          pip install -r services/ml-service/requirements.txt
+          pip install -r services/llm-service/requirements.txt
+          pip install pytest pytest-cov
+          
+      - name: Run PyTest
+        run: pytest services/ --cov=services --cov-report=xml --cov-fail-under=85
+        
+  test-node:
+    name: Node/React Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run Vitest
+        run: npx vitest run --coverage
+        
+  security-scan:
+    name: Security Scans
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          
+      - name: Install Bandit
+        run: pip install bandit
+        
+      - name: Run Bandit Scan
+        run: bandit -r services/ -ll
+        
+      - name: Run npm audit
+        run: npm audit
