@@ -9,7 +9,7 @@ import MoodCalendar from '../../../components/dashboard/MoodCalendar';
 import BreathingExercise from '../../../components/breathing/BreathingExercise';
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<any[]>([
     { id: '1', role: 'assistant' as const, content: 'Assalamu Alaikum. I am MIRA. How are you feeling right now?' }
   ]);
   const [input, setInput] = useState('');
