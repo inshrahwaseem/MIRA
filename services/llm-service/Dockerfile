@@ -5,13 +5,16 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=off \
     PIP_DISABLE_PIP_VERSION_CHECK=on
 
-# Install basic system deps
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+# Upgrade pip and install setuptools to fix 'pkg_resources' missing error
+RUN pip install --no-cache-dir --upgrade pip setuptools
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
