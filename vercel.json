@@ -1,0 +1,16 @@
+{
+  "experimentalServices": {
+    "api-gateway": {
+      "entrypoint": "apps/api-gateway",
+      "routePrefix": "/_/api-gateway"
+    },
+    "llm-service": {
+      "entrypoint": "services/llm-service",
+      "routePrefix": "/_/llm-service"
+    },
+    "ml-service": {
+      "entrypoint": "services/ml-service",
+      "routePrefix": "/_/ml-service"
+    }
+  }
+}

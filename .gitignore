@@ -52,3 +52,5 @@ data/
 # Local secrets
 keys/
 secrets/
+
+.vercel
