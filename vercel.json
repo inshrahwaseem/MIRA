@@ -1,8 +1,5 @@
 {
   "version": 2,
-  "public": true,
-  "cleanUrls": true,
-  "framework": "nextjs",
   "buildCommand": "pnpm --filter web run build",
   "installCommand": "pnpm install",
   "outputDirectory": "apps/web/.next",
