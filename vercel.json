@@ -1,16 +1,10 @@
 {
-  "experimentalServices": {
-    "api-gateway": {
-      "entrypoint": "apps/api-gateway",
-      "routePrefix": "/_/api-gateway"
-    },
-    "llm-service": {
-      "entrypoint": "services/llm-service",
-      "routePrefix": "/_/llm-service"
-    },
-    "ml-service": {
-      "entrypoint": "services/ml-service",
-      "routePrefix": "/_/ml-service"
-    }
-  }
+  "version": 2,
+  "public": true,
+  "cleanUrls": true,
+  "framework": "nextjs",
+  "buildCommand": "pnpm --filter web run build",
+  "installCommand": "pnpm install",
+  "outputDirectory": "apps/web/.next",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./"
 }
