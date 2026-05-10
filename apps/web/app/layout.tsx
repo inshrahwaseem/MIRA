@@ -1,10 +1,11 @@
 import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata } from "next";
 import "./globals.css";
+import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
-  title: "MIRA | Multimodal Mental Health Companion AI",
-  description: "A privacy-first, multimodal mental health AI companion.",
+  title: "MIRA | Premium Mental Health AI",
+  description: "A luxury, privacy-first multimodal mental health companion.",
 };
 
 export default function RootLayout({
@@ -14,9 +15,19 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
-        <body style={{ margin: 0, padding: 0 }}>
-          {children}
+      <html lang="en" suppressHydrationWarning>
+        <head>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        </head>
+        <body className="antialiased selection:bg-accent/30">
+          <ThemeProvider 
+            attribute="data-theme" 
+            defaultTheme="midnight" 
+            enableSystem={false}
+          >
+            {children}
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>
