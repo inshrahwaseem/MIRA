@@ -17,19 +17,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Upgrade pip and install setuptools to fix 'pkg_resources' missing error
-RUN pip install --no-cache-dir --upgrade pip setuptools
+# Upgrade pip and pin setuptools to an older version to maintain pkg_resources compatibility
+RUN pip install --no-cache-dir --upgrade pip "setuptools<58.0.0"
 
 COPY requirements.txt .
+
+# Install requirements (whisper is removed from requirements.txt)
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Install whisper separately with build isolation disabled to use the pinned setuptools
+RUN pip install --no-cache-dir "openai-whisper==20231117" --no-build-isolation
 
 COPY . .
 
+# Create a non-root user and switch to it
 RUN useradd -m appuser
 USER appuser
 
-EXPOSE 8000
+EXPOSE ${PORT:-8001}
 
-HEALTHCHECK --interval=60s CMD curl -f http://localhost:8000/health || exit 1
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]

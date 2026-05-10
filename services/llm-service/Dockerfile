@@ -13,19 +13,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Upgrade pip and install setuptools to fix 'pkg_resources' missing error
-RUN pip install --no-cache-dir --upgrade pip setuptools
+# Upgrade pip and pin setuptools for stability
+RUN pip install --no-cache-dir --upgrade pip "setuptools<58.0.0"
 
 COPY requirements.txt .
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Create a non-root user and switch to it
 RUN useradd -m appuser
 USER appuser
 
-EXPOSE 8001
+EXPOSE ${PORT:-8002}
 
-HEALTHCHECK --interval=60s CMD curl -f http://localhost:8001/health || exit 1
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "1"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002"]
