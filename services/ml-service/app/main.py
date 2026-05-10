@@ -39,7 +39,7 @@ app.add_middleware(
 
 @app.middleware("http")
 async def security_middleware(request: Request, call_next):
-    if request.url.path in ["/docs", "/redoc", "/openapi.json"]:
+    if request.url.path in ["/health", "/docs", "/redoc", "/openapi.json"]:
         return await call_next(request)
         
     secret = request.headers.get("x-internal-secret")
@@ -57,5 +57,9 @@ async def security_middleware(request: Request, call_next):
             status_code=500, 
             content={"error": "Something went wrong", "request_id": str(uuid.uuid4())}
         )
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "ml-service"}
 
 app.include_router(analysis_router, prefix="", tags=["analysis"])

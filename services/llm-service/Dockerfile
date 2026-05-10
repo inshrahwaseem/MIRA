@@ -24,8 +24,12 @@ COPY . .
 
 # Create a non-root user and switch to it
 RUN useradd -m appuser
+RUN chown -R appuser:appuser /app
 USER appuser
 
-EXPOSE ${PORT:-8002}
+# Railway provides PORT env var
+ENV PORT=8002
+EXPOSE ${PORT}
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002"]
+# Run using the module path since main.py is in the app/ directory
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT}
