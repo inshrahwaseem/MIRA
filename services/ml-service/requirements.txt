@@ -29,3 +29,5 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.1.2
 pyyaml==6.0.1
 colorama==0.4.6
+slowapi==0.1.9
+shap==0.44.1

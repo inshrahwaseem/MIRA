@@ -23,3 +23,4 @@ colorama==0.4.6
 chromadb==0.4.22
 tiktoken==0.6.0
 langchain-community==0.0.30
+slowapi==0.1.9

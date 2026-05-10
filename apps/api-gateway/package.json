@@ -11,6 +11,8 @@
     "express": "4.18.3",
     "cors": "2.8.5",
     "helmet": "7.1.0",
+    "axios": "1.6.7",
+    "express-rate-limit": "7.2.0",
     "@clerk/clerk-sdk-node": "4.13.11",
     "shared-types": "workspace:*",
     "shared-utils": "workspace:*"
