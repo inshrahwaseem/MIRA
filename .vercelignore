@@ -1,5 +1,8 @@
+# Only ignore non-frontend related backend services
 services/
-apps/api-gateway/
-packages/
-README.md
+database/
+supabase/
 docs/
+
+# Do NOT ignore packages/ or apps/api-gateway/ as they are part of the workspace
+# and are needed for a successful pnpm install/build.
